@@ -319,22 +319,24 @@
                                forKeyPath:NSStringFromSelector(@selector(description))];
 }
 
-#if !SWIFT_PACKAGE
+//#if !SWIFT_PACKAGE
 // TODO: Investigate why this test fails in Swift PM build.
 
 /** Tests that -[NSObjectProtocol respondsToSelector:] works as expected after someone else ISA
  *  swizzles a proxy object that we've also ISA Swizzled.
  */
 - (void)testRespondsToSelectorWorksEvenIfSwizzledProxyISASwizzledBySomeoneElse {
-  Class generatedClass = nil;
-  __weak GULObjectSwizzler *weakSwizzler;
+    Class generatedClass = nil;
+    // When `weakSwizzler` is enabled, the test passes. When it is commented out,
+    // it fails... why?
+//    __weak GULObjectSwizzler *weakSwizzler;
 
   @autoreleasepool {
     NSObject *object = [[NSObject alloc] init];
     GULProxy *proxyObject = [GULProxy proxyWithDelegate:object];
 
     GULObjectSwizzler *swizzler = [[GULObjectSwizzler alloc] initWithObject:proxyObject];
-    weakSwizzler = swizzler;
+//    weakSwizzler = swizzler;
     [swizzler copySelector:@selector(donorDescription)
                  fromClass:[GULObjectSwizzlerTest class]
            isClassSelector:NO];
@@ -351,12 +353,18 @@
     XCTAssertTrue([proxyObject respondsToSelector:@selector(donorDescription)]);
     XCTAssertEqual([proxyObject performSelector:@selector(donorDescription)],
                    @"SwizzledDonorDescription");
+
+    // Release GULObjectSwizzler
+    [GULObjectSwizzler setAssociatedObject:proxyObject
+                                       key:kGULSwizzlerAssociatedObjectKey
+                                     value:nil
+                               association:GUL_ASSOCIATION_RETAIN];
   }
 
   // Clean up.
   objc_disposeClassPair(generatedClass);
 }
-#endif
+//#endif
 
 #if !TARGET_OS_MACCATALYST
 // Test fails on Catalyst due to an interaction with GULSceneDelegateSwizzlerTests.
